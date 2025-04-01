@@ -1,0 +1,3 @@
+datasets/**
+yolo-v11/runs/**
+yolo-v11/yolo11s.pt
