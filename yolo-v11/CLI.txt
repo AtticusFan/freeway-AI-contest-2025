@@ -1,6 +1,0 @@
-=====train model=====
-yolo task=detect mode=train model=yolo11s.pt data=taiwan-CCTV-1/data.yaml epochs=10 imgsz=640 plots=True
-=====validate model=====
-yolo task=detect mode=val model=runs/detect/train3/weights/best.pt data=taiwan-CCTV-1/data.yaml
-=====Inference with Custom Model=====
-yolo task=detect mode=predict model=runs/detect/train3/weights/best.pt conf=0.25 source=taiwan-CCTV-1/test/images save=True

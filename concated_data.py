@@ -6,13 +6,13 @@ import pandas as pd
 def main():
     # 1. 讀取已篩選過的路況資料（Timestamp 已含 +08:00 時區）
     traffic = pd.read_csv(
-        'livetraffic_data_0501_0506.csv',
+        'datasets/vd_livetraffic_data_0501_0521.csv',
         parse_dates=['Timestamp']
     )
 
     # 2. 讀取已填補過的氣象資料，解析 ObsTime 為 datetime 並指定台北時區
     weather = pd.read_csv(
-        'combined_weather_data_0501_0506.csv',
+        'datasets/weather_data_0501_0521.csv',
         parse_dates=['ObsTime']
     )
     weather['ObsTime'] = weather['ObsTime'].dt.tz_localize('Asia/Taipei')
@@ -38,7 +38,7 @@ def main():
 
     # 6. 輸出合併後的結果
     merged.to_csv(
-        'merged_traffic_weather_0501_0506.csv',
+        'datasets/merged_traffic_weather_0501_0521.csv',
         index=False
     )
 
