@@ -47,12 +47,13 @@ FEATURES = [
     'VehicleType_S_Volume','VehicleType_S_Speed',
     'VehicleType_L_Volume','VehicleType_L_Speed',
     'VehicleType_T_Volume','VehicleType_T_Speed',
+    'TravelTime','TravelSpeed',
     'StnPres','Temperature','RH','WS','WD','WSGust','WDGust','Precip'
 ]
 TARGET = 'CongestionLevel'
-# 預測未來 15 分鐘的壅塞等級，使用過去 60 分鐘的資料
+# 預測未來 5 分鐘的壅塞等級，使用過去 60 分鐘的資料
 SEQ_LEN = 60
-HORIZON = 15
+HORIZON = 5
 
 sequences, targets, section_ids = [], [], []
 for sec, grp in df_resampled.groupby(level=0):
@@ -117,7 +118,7 @@ num_classes = len(np.unique(y))
 model = GRUPredictor(len(FEATURES), 64, 2, num_classes).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
-EPOCHS = 30
+EPOCHS = 20
 
 #訓練與評估
 records, metrics_records = [], []
