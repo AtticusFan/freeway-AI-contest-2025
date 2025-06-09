@@ -202,24 +202,22 @@ if __name__ == '__main__':
         y_pred = scaler_y.inverse_transform(np.array(y_pred_scaled).reshape(-1,1)).reshape(-1)
         y_true = scaler_y.inverse_transform(np.array(y_true_scaled).reshape(-1,1)).reshape(-1)
 
-        # 計算一般回歸指標（原始尺度）
-        mse = mean_squared_error(y_true, y_pred)
-        mae = mean_absolute_error(y_true, y_pred)
+        # # 計算一般回歸指標（原始尺度）
+        # mse = mean_squared_error(y_true, y_pred)
+        # mae = mean_absolute_error(y_true, y_pred)
         #print(f"HORIZON {HORIZON} 分鐘  Test MSE (原始): {mse:.4f}  MAE: {mae:.4f}")
 
         # ===== 計算預測正確率 =====
         # |y_pred - y_true| <= 60
         diff = np.abs(y_pred - y_true)
-        correct_60 = np.sum(diff <= 60)
+        correct_30 = np.sum(diff <= 30)
         total_samples = len(diff)
-        acc_within_60 = correct_60 / total_samples
-        print(f"預測{HORIZON}分鐘後旅行時間的Accuracy {acc_within_60:.4f}")
+        acc_within_30 = correct_30 / total_samples
+        print(f"預測{HORIZON}分鐘後旅行時間的Accuracy {acc_within_30:.4f}")
         
         # 將指標結果寫入CSV檔案
         metrics_data = pd.DataFrame({
-            'MSE': [mse],
-            'MAE': [mae],
-            'Accuracy': [acc_within_60]
+            'Accuracy': [acc_within_30]
         })
         
         metrics_filename = f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_metrics_v{model_version}.csv'
@@ -231,7 +229,7 @@ if __name__ == '__main__':
             'CurrentTime': times_test,
             'TrueTravelTime': y_true,
             'PredictedTravelTime': y_pred,
-            'Within60': (diff <= 60).astype(int)
+            'Within30': (diff <= 30).astype(int)
         })
         df_pred.to_csv(f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_predictions_v{model_version}.csv', index=False)
 
