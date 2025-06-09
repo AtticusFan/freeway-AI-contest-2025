@@ -182,8 +182,8 @@ if __name__ == '__main__':
 
         # 寫檔
         
-        pd.DataFrame(records).to_csv(f'result/GRU_0501_0521_loss_{HORIZON}min_v{model_version}.csv', index=False)
-        pd.DataFrame(metrics_records).to_csv(f'result/GRU_0501_0521_metrics_{HORIZON}min_v{model_version}.csv', index=False)
+        pd.DataFrame(records).to_csv(f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_training_log_v{model_version}.csv', index=False)
+        pd.DataFrame(metrics_records).to_csv(f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_metrics_v{model_version}.csv', index=False)
 
         model.eval()
         y_pred_test = []
@@ -209,10 +209,10 @@ if __name__ == '__main__':
             'TrueCongestionLevel': y_test,
             'PredictedCongestionLevel': y_pred_test
         })
-        df_pred.to_csv(f'result/GRU_0501_0521_predictions_{HORIZON}min_v{model_version}.csv', index=False)
+        df_pred.to_csv(f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_predictions_v{model_version}.csv', index=False)
 
         # ====== 依照需求，將結果輸出成純文字格式 ======
-        output_filename = f'result/GRU_0501_0521_predictions_{HORIZON}min_v{model_version}.txt'
+        output_filename = f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_predict_info_v{model_version}.txt'
         with open(output_filename, 'w', encoding='utf-8') as fout:
             for sec, ts, pred in zip(ids_test, times_test, y_pred_test):
                 ts_pd = pd.to_datetime(ts)
