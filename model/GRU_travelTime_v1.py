@@ -27,7 +27,6 @@ if __name__ == '__main__':
 
     # 中位數
     agg_cfg = {
-        'Status':'median', 'LaneID':'median', 'LaneType':'median', 'LaneSpeed':'median',
         'Occupancy':'median',
         'VehicleType_S_Volume':'median','VehicleType_S_Speed':'median',
         'VehicleType_L_Volume':'median','VehicleType_L_Speed':'median',
