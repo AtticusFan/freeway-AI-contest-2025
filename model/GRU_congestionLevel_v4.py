@@ -211,7 +211,7 @@ if __name__ == '__main__':
         })
         df_pred.to_csv(f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_predictions_v{model_version}.csv', index=False)
 
-        # ====== 依照需求，將結果輸出成純文字格式 ======
+        # ====== 將結果輸出成純文字 ======
         output_filename = f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_predict_info_v{model_version}.txt'
         with open(output_filename, 'w', encoding='utf-8') as fout:
             for sec, ts, pred in zip(ids_test, times_test, y_pred_test):

@@ -25,7 +25,7 @@ if __name__ == '__main__':
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df = df.set_index('Timestamp')
 
-    # 中位數聚合設定
+    # 中位數
     agg_cfg = {
         'Status':'median', 'LaneID':'median', 'LaneType':'median', 'LaneSpeed':'median',
         'Occupancy':'median',
@@ -52,7 +52,6 @@ if __name__ == '__main__':
         #'TravelSpeed',
         'StnPres','Temperature','RH','WS','WD','WSGust','WDGust','Precip'
     ]
-    # 目標變數改成 TravelTime（秒）
     TARGET = 'TravelTime'
 
     # 使用過去 SEQ_LEN 分鐘的資料來預測 HORIZON 分鐘後的旅行時間
@@ -65,34 +64,30 @@ if __name__ == '__main__':
 
         sequences, targets, section_ids, times = [], [], [], []
         for section, grp in df_resampled.groupby(level=0):
-            arr = grp[FEATURES + [TARGET]].values  # 最後一維是 TravelTime
+            arr = grp[FEATURES + [TARGET]].values
             time_index = grp.index.get_level_values('Timestamp').to_numpy()
             for i in range(len(arr) - SEQ_LEN - HORIZON + 1):
-                # 序列輸入 X：前 SEQ_LEN 行的 FEATURES
                 sequences.append(arr[i : i + SEQ_LEN, :-1])
-                # 目標 y：SEQ_LEN + HORIZON - 1 對應的 TravelTime
                 targets.append(arr[i + SEQ_LEN + HORIZON - 1, -1])
                 section_ids.append(section)
                 times.append(time_index[i + SEQ_LEN - 1])
 
-        X = np.stack(sequences).astype(np.float32)  # 形狀 (N, SEQ_LEN, n_features)
-        y = np.array(targets, dtype=np.float32)     # 形狀 (N,)
+        X = np.stack(sequences).astype(np.float32)  
+        y = np.array(targets, dtype=np.float32)     
         section_ids = np.array(section_ids)
         times = np.array(times)
 
-        # 正規化 X（對每個 feature 做 MinMaxScaler）
         nsamples, _, nfeatures = X.shape
         X_flat = X.reshape(-1, nfeatures)
         scaler_X = MinMaxScaler()
         X_scaled = scaler_X.fit_transform(X_flat)
         X = X_scaled.reshape(nsamples, SEQ_LEN, nfeatures)
 
-        # 正規化 y（TravelTime）以提升收斂
         y = y.reshape(-1, 1)
         scaler_y = MinMaxScaler()
         y_scaled = scaler_y.fit_transform(y).reshape(-1)
 
-        # 切分 Train/Val/Test，同時帶入 section_ids 與 times
+        # 切分 Train/Val/Test
         X_temp, X_test, y_temp, y_test, ids_temp, ids_test, times_temp, times_test = train_test_split(
             X, y_scaled, section_ids, times,
             test_size=0.15,
@@ -109,7 +104,6 @@ if __name__ == '__main__':
             random_state=42
         )
 
-        # 建立 DataLoader
         def create_loader(X, y, batch_size=128, shuffle=False):
             ds = TensorDataset(
                 torch.tensor(X, dtype=torch.float32),
@@ -121,7 +115,7 @@ if __name__ == '__main__':
         val_loader   = create_loader(X_val,   y_val)
         test_loader  = create_loader(X_test,  y_test)
 
-        # 定義 GRU 回歸模型
+        # 定義 GRU
         class GRURegressor(nn.Module):
             def __init__(self, input_size, hidden_size, num_layers, drop_prob=0.2):
                 super().__init__()
@@ -187,7 +181,6 @@ if __name__ == '__main__':
         # 儲存模型參數
         #torch.save(model.state_dict(), f'model/GRU_TravelTime_{HORIZON}min_v{model_version}.pt')
 
-        # 在測試集上做預測
         model.eval()
         y_pred_scaled = []
         y_true_scaled = []
