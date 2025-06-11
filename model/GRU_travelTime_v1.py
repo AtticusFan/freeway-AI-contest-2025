@@ -48,7 +48,7 @@ if __name__ == '__main__':
         'Occupancy',
         'VehicleType_S_Volume','VehicleType_S_Speed',
         'VehicleType_L_Volume','VehicleType_L_Speed',
-        'VehicleType_T_Volume','VehicleType_T_Speed',
+        # 'VehicleType_T_Volume','VehicleType_T_Speed',
         #'TravelSpeed',
         'StnPres','Temperature','RH','WS','WD','WSGust','WDGust','Precip'
     ]
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         print(f"\n========== 訓練 HORIZON = {HORIZON} 分鐘 ==========")
 
         sequences, targets, section_ids, times = [], [], [], []
-        for sec, grp in df_resampled.groupby(level=0):
+        for section, grp in df_resampled.groupby(level=0):
             arr = grp[FEATURES + [TARGET]].values  # 最後一維是 TravelTime
             time_index = grp.index.get_level_values('Timestamp').to_numpy()
             for i in range(len(arr) - SEQ_LEN - HORIZON + 1):
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 sequences.append(arr[i : i + SEQ_LEN, :-1])
                 # 目標 y：SEQ_LEN + HORIZON - 1 對應的 TravelTime
                 targets.append(arr[i + SEQ_LEN + HORIZON - 1, -1])
-                section_ids.append(sec)
+                section_ids.append(section)
                 times.append(time_index[i + SEQ_LEN - 1])
 
         X = np.stack(sequences).astype(np.float32)  # 形狀 (N, SEQ_LEN, n_features)
@@ -210,14 +210,14 @@ if __name__ == '__main__':
         # ===== 計算預測正確率 =====
         # |y_pred - y_true| <= 60
         diff = np.abs(y_pred - y_true)
-        correct_30 = np.sum(diff <= 30)
+        correct_60 = np.sum(diff <= 60)
         total_samples = len(diff)
-        acc_within_30 = correct_30 / total_samples
-        print(f"預測{HORIZON}分鐘後旅行時間的Accuracy {acc_within_30:.4f}")
+        acc_within_60 = correct_60 / total_samples
+        print(f"預測{HORIZON}分鐘後旅行時間的Accuracy {acc_within_60:.4f}")
         
         # 將指標結果寫入CSV檔案
         metrics_data = pd.DataFrame({
-            'Accuracy': [acc_within_30]
+            'Accuracy': [acc_within_60]
         })
         
         metrics_filename = f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_metrics_v{model_version}.csv'
@@ -229,19 +229,19 @@ if __name__ == '__main__':
             'CurrentTime': times_test,
             'TrueTravelTime': y_true,
             'PredictedTravelTime': y_pred,
-            'Within30': (diff <= 30).astype(int)
+            'Within30': (diff <= 60).astype(int)
         })
         df_pred.to_csv(f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_predictions_v{model_version}.csv', index=False)
 
         # 將結果以純文字格式輸出
         output_filename = f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_predict_info_v{model_version}.txt'
         with open(output_filename, 'w', encoding='utf-8') as fout:
-            for sec, ts, pred_tt in zip(ids_test, times_test, y_pred):
+            for section, ts, pred_value in zip(ids_test, times_test, y_pred):
                 ts_pd = pd.to_datetime(ts)
-                ts_str = ts_pd.strftime('%Y-%m-%d %H:%M')
+                current_time = ts_pd.strftime('%Y-%m-%d %H:%M')
                 line = (
-                    f"Section:{sec}，當前時間：{ts_str}，"
-                    f"{HORIZON} 分鐘後旅行時間，預測值：{pred_tt:.2f}秒\n"
+                    f"Section:{section}，當前時間：{current_time}，"
+                    f"{HORIZON} 分鐘後旅行時間，預測值：{pred_value:.2f}秒\n"
                 )
                 fout.write(line)
 

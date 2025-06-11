@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 # 讀取模型效能指標資料
 minutes = input("請輸入時間(5、15 或 30 分鐘):")
-df = pd.read_csv(f'{minutes}min/GRU_congestionLevel_{minutes}min_metrics_v1.csv')
+df = pd.read_csv(f'{minutes}min/GRU_congestionLevel_{minutes}min_metrics_v2.csv')
 
 # 繪製各項指標隨 Epoch 的變化
 x = df['Epoch']

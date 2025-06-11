@@ -48,8 +48,8 @@ if __name__ == '__main__':
         'Occupancy',
         'VehicleType_S_Volume','VehicleType_S_Speed',
         'VehicleType_L_Volume','VehicleType_L_Speed',
-        'VehicleType_T_Volume','VehicleType_T_Speed',
-        'TravelTime','TravelSpeed',
+        # 'VehicleType_T_Volume','VehicleType_T_Speed',
+        # 'TravelTime','TravelSpeed',
         'StnPres','Temperature','RH','WS','WD','WSGust','WDGust','Precip'
     ]
     TARGET = 'CongestionLevel'
