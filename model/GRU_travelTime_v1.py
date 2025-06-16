@@ -27,6 +27,7 @@ if __name__ == '__main__':
 
     # 中位數
     agg_cfg = {
+        'Status':'median', 'LaneID':'median', 'LaneType':'median', 'LaneSpeed':'median',
         'Occupancy':'median',
         'VehicleType_S_Volume':'median','VehicleType_S_Speed':'median',
         'VehicleType_L_Volume':'median','VehicleType_L_Speed':'median',
@@ -221,10 +222,13 @@ if __name__ == '__main__':
             'CurrentTime': times_test,
             'TrueTravelTime': y_true,
             'PredictedTravelTime': y_pred,
-            'Within30': (diff <= 60).astype(int)
+            'Within60': (diff <= 60).astype(int)
         })
         df_pred.to_csv(f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_predictions_v{model_version}.csv', index=False)
-
+       # ====== 儲存模型 ======
+        model_path = f'result/GRU_TravelTime_{HORIZON}min_model_v{model_version}.pth'
+        torch.save(model.state_dict(), model_path)
+        print(f"已將模型儲存至：{model_path}")
         # 將結果以純文字格式輸出
         output_filename = f'result/travelTime/{HORIZON}min/GRU_TravelTime_{HORIZON}min_predict_info_v{model_version}.txt'
         with open(output_filename, 'w', encoding='utf-8') as fout:

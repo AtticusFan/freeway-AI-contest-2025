@@ -1,4 +1,4 @@
-SectionID,CurrentTime,TrueTravelTime,PredictedTravelTime,Within30
+SectionID,CurrentTime,TrueTravelTime,PredictedTravelTime,Within60
 26,2025-05-04 09:13:00+08:00,193.0,194.84485,1
 24,2025-05-01 16:02:00+08:00,80.0,110.45622,1
 31,2025-05-10 13:22:00+08:00,64.0,72.1365,1

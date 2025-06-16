@@ -210,7 +210,10 @@ if __name__ == '__main__':
             'PredictedCongestionLevel': y_pred_test
         })
         df_pred.to_csv(f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_predictions_v{model_version}.csv', index=False)
-
+        # ====== 儲存模型 ======
+        model_path = f'result/GRU_congestionLevel_{HORIZON}min_model_v{model_version}.pth'
+        torch.save(model.state_dict(), model_path)
+        print(f"已將模型儲存至：{model_path}")
         # ====== 將結果輸出成純文字 ======
         output_filename = f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_predict_info_v{model_version}.txt'
         with open(output_filename, 'w', encoding='utf-8') as fout:
