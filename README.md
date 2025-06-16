@@ -3,7 +3,7 @@
 路徑先指定到../../freeway-AI-contest-2025  
 預估路段的壅塞程度
 ```
-python -m model.GRU_congestionLevel_v4
+python -m model.GRU_congestionLevel_v5
 ```
 預估路段的旅行時間
 ```

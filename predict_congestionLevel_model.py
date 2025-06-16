@@ -3,10 +3,10 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 import json
-from sklearn.preprocessing import MinMaxScaler
-import joblib # 用於載入 scaler 物件
+import joblib
+import os
 
-# 1. 確保模型類別的定義與訓練時相同
+# 1. GRUPredictor 類別定義 (與訓練時相同)
 class GRUPredictor(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes, drop_prob=0.2):
         super().__init__()
@@ -17,83 +17,90 @@ class GRUPredictor(nn.Module):
         out, _ = self.gru(x)
         return self.fc(out[:, -1, :])
 
-def run_prediction(input_path, output_path, model_path, scaler_path, config):
+def run_batch_prediction(input_path, output_path, model_path, scaler_path, config):
     """
-    從 JSON 檔案載入資料，執行壅塞程度預測，並將結果儲存為 JSON 檔案。
-
-    Args:
-        input_path (str): 輸入 JSON 檔案的路徑。
-        output_path (str): 輸出 JSON 檔案的路徑。
-        model_path (str): 已儲存的 .pth 模型檔案路徑。
-        scaler_path (str): 已儲存的 .pkl scaler 檔案路徑。
-        config (dict): 包含模型與資料設定的字典。
+    從 JSON 檔案載入資料，使用滑動窗口對整個資料集進行批次預測，
+    並將所有預測結果直接覆寫至輸出 JSON 檔案。
     """
-    # 讀取設定
+    # --- 1. 載入設定與模型 ---
     seq_len = config['seq_len']
     features = config['features']
-    num_features = len(features)
-    num_classes = config['num_classes']
     horizon = config['horizon']
-
-    # 設置設備
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # 載入輸入資料
+    # 載入 scaler
+    scaler = joblib.load(scaler_path)
+    
+    # 初始化模型並載入權重
+    model = GRUPredictor(
+        input_size=len(features),
+        hidden_size=64,
+        num_layers=2,
+        num_classes=config['num_classes']
+    ).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.eval()
+
+    # --- 2. 讀取並處理輸入資料 ---
     with open(input_path, 'r', encoding='utf-8') as f:
         input_data = json.load(f)
     
     section_id = input_data['SectionID']
     df_data = pd.DataFrame(input_data['data'])
+
+    # ==================== 第 1 項修正：強制排序 ====================
+    # 將 'Timestamp' 欄位轉換為 pandas 的 datetime 物件格式
+    df_data['Timestamp'] = pd.to_datetime(df_data['Timestamp'])
+    # 依照 'Timestamp' 欄位進行排序，並重設索引
+    df_data = df_data.sort_values(by='Timestamp').reset_index(drop=True)
+    # =============================================================
     
     if len(df_data) < seq_len:
-        raise ValueError(f"輸入資料筆數為 {len(df_data)}，少於模型所需的序列長度 {seq_len}。")
+        print(f"錯誤：輸入資料筆數為 {len(df_data)}，不足以構成一個長度為 {seq_len} 的序列。")
+        return
 
-    # 資料預處理
-    # 選取最新的 seq_len 筆資料與必要特徵
-    df_predict = df_data.tail(seq_len)[features]
-    current_time = df_data['Timestamp'].iloc[-1]
+    # --- 3. 執行滑動窗口預測 ---
+    newly_predicted_results = []
+    total_predictions = len(df_data) - seq_len + 1
+    print(f"資料已排序，將對 {total_predictions} 筆序列進行預測...")
 
-    # 載入 scaler 並進行資料正規化
-    scaler = joblib.load(scaler_path)
-    scaled_data = scaler.transform(df_predict)
-    
-    # 初始化模型並載入權重
-    model = GRUPredictor(input_size=num_features, hidden_size=64, num_layers=2, num_classes=num_classes).to(device)
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    model.eval()
-
-    # 轉換為 Tensor
-    input_tensor = torch.tensor(scaled_data, dtype=torch.float32).unsqueeze(0).to(device)
-
-    # 執行預測
     with torch.no_grad():
-        logits = model(input_tensor)
-        prediction = logits.argmax(dim=1).item()
-        
-    # 建立輸出結果
-    output_data = {
-        "Section": section_id,
-        "當前時間": current_time,
-        f"{horizon}分鐘後壅塞程度": prediction
-    }
+        for i in range(total_predictions):
+            window_df = df_data.iloc[i : i + seq_len]
+            current_time = window_df['Timestamp'].iloc[-1].strftime('%Y-%m-%d %H:%M:%S')
+            features_data = window_df[features]
+            scaled_data = scaler.transform(features_data.values)
+            input_tensor = torch.tensor(scaled_data, dtype=torch.float32).unsqueeze(0).to(device)
+            logits = model(input_tensor)
+            prediction = logits.argmax(dim=1).item()
+            
+            output_data = {
+                "Section": section_id,
+                "當前時間": current_time,
+                f"{horizon}分鐘後壅塞程度": prediction
+            }
+            newly_predicted_results.append(output_data)
 
-    # 寫入 JSON 檔案
+    print(f"批次預測完成，共產生 {len(newly_predicted_results)} 筆新結果。")
+
+    # ==================== 第 2 項修正：改為覆寫模式 ====================
+    # 直接將新產生的結果列表寫入檔案，若檔案已存在則會被覆蓋
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(output_data, f, ensure_ascii=False, indent=4)
+        json.dump(newly_predicted_results, f, ensure_ascii=False, indent=4)
+    # ===============================================================
     
-    print(f"預測完成，結果已儲存至：{output_path}")
-
+    print(f"所有結果已「覆寫」至：{output_path}")
 
 # ====== 使用範例 ======
 if __name__ == '__main__':
     # --- 參數設定 (需與訓練流程對應) ---
-    MODEL_VERSION = 'v1' # 假設模型版本為 v1
-    HORIZON = 5          # 預測 5 分鐘後
+    MODEL_VERSION = '3' # 請根據您的模型版本修改
+    HORIZON = 5
     
     CONFIG = {
         'seq_len': 30,
         'horizon': HORIZON,
-        'num_classes': 5, # 假設壅塞等級分為 0, 1, 2, 3 四類
+        'num_classes': 6, 
         'features': [
             'Occupancy', 'VehicleType_S_Volume', 'VehicleType_S_Speed',
             'VehicleType_L_Volume', 'VehicleType_L_Speed', 'StnPres',
@@ -102,17 +109,15 @@ if __name__ == '__main__':
     }
 
     # --- 檔案路徑設定 ---
-    # 重要：scaler 應於訓練模型後儲存，此處僅為示意
-    # 例如在訓練腳本中加入: joblib.dump(scaler, 'scaler.pkl')
-    SCALER_PATH = f'result/congestionLevel/{HORIZON}min/scaler_v{MODEL_VERSION}.pkl'
-    MODEL_PATH = f'result/congestionLevel/{HORIZON}min/GRU_congestionLevel_{HORIZON}min_model_v{MODEL_VERSION}.pth'
+    SCALER_PATH = f'result/GRU_congestionLevel_5min_scaler_v{MODEL_VERSION}.pkl'
+    MODEL_PATH = f'result/GRU_congestionLevel_5min_model_v{MODEL_VERSION}.pth'
     
-    INPUT_JSON_PATH = 'input.json'
-    OUTPUT_JSON_PATH = 'output.json'
+    INPUT_JSON_PATH = 'section23_2025_05_10.json'
+    OUTPUT_JSON_PATH = 'section23_2025_05_10_output.json'
 
     # --- 執行預測 ---
     try:
-        run_prediction(
+        run_batch_prediction(
             input_path=INPUT_JSON_PATH,
             output_path=OUTPUT_JSON_PATH,
             model_path=MODEL_PATH,
