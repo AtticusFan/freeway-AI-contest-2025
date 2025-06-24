@@ -4,7 +4,7 @@ import numpy as np
 # --- 1. 載入最終確認的資料集 ---
 try:
     # 載入您的 VD 偵測器資料
-    vd_df = pd.read_csv('datasets/0501_0610/merged_traffic_weather_0501_0610.csv')
+    vd_df = pd.read_csv('datasets/0401_0610/merged_traffic_weather_0401_0610.csv')
     # 載入最新的道路幾何資料檔案
     geom_df = pd.read_csv('datasets/N0010_road_geometry.csv')
     print("成功載入 'vd_data.csv' 與 'N0010_road_geometry.csv'。")
@@ -94,7 +94,7 @@ print(final_df.head())
 
 # 將結果儲存為新的 CSV 檔案
 try:
-    final_df.to_csv('datasets/0501_0610/merged_traffic_geometry_weather_0501_0610.csv', index=False)
+    final_df.to_csv('datasets/0401_0610/merged_traffic_weather_geometry_0401_0610.csv', index=False)
     print("\n已將合併結果儲存至 'merged_vd_geometry.csv'")
 except Exception as e:
     print(f"\n儲存檔案時發生錯誤: {e}")
