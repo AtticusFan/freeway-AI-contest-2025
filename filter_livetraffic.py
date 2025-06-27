@@ -31,7 +31,7 @@ def main():
     time_condition = (df['Timestamp'] >= start) & (df['Timestamp'] <= end)
     
     # 4.2. Status 條件
-    status_condition = df['Status'] == 0
+    #status_condition = df['Status'] == 0
     
     # 4.3. CongestionLevel 條件：篩選數值為 1~5 的資料
     # 確保 CongestionLevel 欄位存在且為數值型態
@@ -40,10 +40,10 @@ def main():
         congestion_condition = df['CongestionLevel'].between(1, 5)
         
         # 4.4. 套用所有篩選條件
-        df = df[time_condition & status_condition & congestion_condition]
+        df = df[time_condition &  congestion_condition]
     else:
         # 若部分檔案無 CongestionLevel 欄位，則僅依其他條件篩選
-        df = df[time_condition & status_condition]
+        df = df[time_condition ]
 
 
     # 5. 刪除欄位 (保留 CongestionLevel, 刪除 CongestionLevelID)

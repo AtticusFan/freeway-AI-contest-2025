@@ -89,8 +89,11 @@ if __name__ == '__main__':
         'horizon': HORIZON,
         'num_classes': 6, 
         'features': [
-            'Occupancy', 'VehicleType_S_Volume', 'VehicleType_S_Speed',
-            'VehicleType_L_Volume', 'VehicleType_L_Speed', 'StnPres',
+            'Occupancy', 'VehicleType_S_Volume', #'VehicleType_S_Speed',
+            'VehicleType_L_Volume', 
+            #'VehicleType_L_Speed', 
+            'median_speed',
+            'StnPres',
             'Temperature', 'RH', 'WS', 'WD', 'WSGust', 'WDGust', 'Precip'
         ]
     }
