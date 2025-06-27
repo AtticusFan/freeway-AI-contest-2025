@@ -24,7 +24,10 @@ class GRUPredictor(nn.Module):
     def forward(self, x):
         out, _ = self.gru(x)
         return self.fc(out[:, -1, :])
-# 宣告全域變數
+'''
+宣告全域變數，當接收到新資料時會更新這些變數
+這些變數會在預測時使用，並且在每次預測後更新
+'''
 Timestamp = '2000-01-01 00:00:00'
 SectionID = '23'  # 假設 SectionID 為 '23'
 Occupancy = 0.0  # 初始佔用率為 0.0
