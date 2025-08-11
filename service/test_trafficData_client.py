@@ -14,7 +14,7 @@ API_ENDPOINT = "http://127.0.0.1:5001/api/traffic-data"
 SEND_INTERVAL_SECONDS = 5
 
 # --- 要隨機選取的路段 ID 列表 ---
-SECTION_IDS = [str(i) for i in range(23, 32)]
+SECTION_IDS = [str(i) for i in range(23, 25)]
 
 # --- 主程式 ---
 def run_test_client():

@@ -1,6 +1,3 @@
-# -------------------
-# 必要的套件匯入
-# -------------------
 import torch
 import torch.nn as nn
 import numpy as np
@@ -17,7 +14,7 @@ import threading
 from flask import Flask, request, jsonify
 
 # -------------------
-# PyTorch 模型定義 (維持不變)
+# GRU模型定義
 # -------------------
 class GRUPredictor(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes, drop_prob=0.2):
@@ -29,7 +26,7 @@ class GRUPredictor(nn.Module):
         return self.fc(out[:, -1, :])
 
 # -------------------
-# 預測客戶端類別 (已修改)
+# 預測客戶端
 # -------------------
 class TrafficPredictionClient:
     def __init__(self, model_path: str, scaler_path: str, config: Dict, base_url: str = "http://localhost:5000/api"):
@@ -43,12 +40,9 @@ class TrafficPredictionClient:
         self.session = requests.Session()
         self.session.headers.update({'Content-Type': 'application/json'})
 
-        # === 修改核心 ===
-        # 將單一佇列改為一個字典，用來儲存每個 SectionID 各自的佇列
-        # defaultdict 會在嘗試存取一個不存在的鍵時，自動為其建立一個新的 deque
+        # 每個 SectionID 各自的佇列
         self.section_data_queues = defaultdict(lambda: deque(maxlen=self.config['seq_len']))
 
-    # predict_single, _make_request, send_prediction 方法維持不變
     def predict_single(self, sequence_data: List[Dict]) -> Dict[str, Any]:
         df = pd.DataFrame(sequence_data)
         df['Timestamp'] = pd.to_datetime(df['Timestamp'])
@@ -58,7 +52,7 @@ class TrafficPredictionClient:
         input_tensor = torch.tensor(scaled_data, dtype=torch.float32).unsqueeze(0).to(self.device)
         with torch.no_grad():
             prediction = self.model(input_tensor).argmax(dim=1).item()
-        return {"Section": df['SectionID'].iloc[0], "當前時間": df['Timestamp'].iloc[-1].strftime('%Y-%m-%d %H:%M:%S'), f"{self.config['horizon']}分鐘後壅塞程度": prediction}
+        return {"Section": df['SectionID'].iloc[0], "當前時間": df['Timestamp'].iloc[-1].strftime('%Y-%m-%d %H:%M:%S'), f"{self.config['horizon']}分鐘後壅塞程度": prediction+1}
     def _make_request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Dict[str, Any]:
         url = f"{self.base_url}{endpoint}"
         try:
@@ -73,9 +67,8 @@ class TrafficPredictionClient:
         return self._make_request('POST', '/predictions', prediction_result)
 
 
-# 天氣資料獲取功能 (維持不變)
+# 天氣資料獲取
 def get_weather_data() -> Optional[Dict]:
-    # ... 程式碼省略，與前一版相同 ...
     BASE_URL = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
     RESOURCE_ID = "O-A0001-001"
     AUTHORIZATION = "CWA-6A873EC6-E09A-45E8-9962-D10BD5C543DA"
@@ -103,7 +96,7 @@ def get_weather_data() -> Optional[Dict]:
         return None
 
 # -------------------
-# 全域實例與設定
+# Flask 應用程式初始化
 # -------------------
 app = Flask(__name__)
 MODEL_VERSION = '4'
@@ -123,7 +116,7 @@ except FileNotFoundError as e:
     exit()
 
 # -------------------
-# Flask API 端點定義 (已修改)
+# Flask API 端點定義(路況資料)
 # -------------------
 @app.route('/api/traffic-data', methods=['POST'])
 def receive_traffic_data():
@@ -142,7 +135,6 @@ def receive_traffic_data():
     print(f"new_data_point:")
     for key, value in new_data_point.items():
         print(f"  {key}: {value}")
-    # === 修改核心 ===
     # 從傳入的資料中取得 SectionID
     section_id = traffic_data['SectionID']
     # 將資料點加入對應 SectionID 的專屬佇列中
@@ -154,7 +146,7 @@ def receive_traffic_data():
     return jsonify({"status": "success", "message": "資料已成功接收並處理"}), 200
 
 # -------------------
-# 排程器相關函式 (已修改)
+# 排程器相關函式
 # -------------------
 def predict_and_send_to_server(client: TrafficPredictionClient):
     """
@@ -162,10 +154,7 @@ def predict_and_send_to_server(client: TrafficPredictionClient):
     並對每個資料已滿的 SectionID 佇列執行預測與傳送。
     """
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 排程觸發：檢查所有路段是否可進行預測...")
-    
-    # === 修改核心 ===
-    # 遍歷字典中所有的 SectionID 和它們各自的佇列
-    # 使用 list(client.section_data_queues.items()) 是為了避免在迭代中修改字典大小可能產生的問題
+    # 遍歷所有 SectionID 的資料佇列
     for section_id, data_queue in list(client.section_data_queues.items()):
         
         # 檢查該路段的佇列是否已滿
@@ -181,14 +170,14 @@ def predict_and_send_to_server(client: TrafficPredictionClient):
             # 嘗試傳送結果
             print(f">>> 正在嘗試為路段 '{section_id}' 傳送至伺服器...")
             try:
-                server_response = client.send_prediction(prediction_result)
+                prediction_result_json = json.dumps(prediction_result, ensure_ascii=False, indent=2)
+                server_response = client.send_prediction(prediction_result_json)
                 print(f">>> 成功為路段 '{section_id}' 傳送，回應如下:")
                 print(json.dumps(server_response, ensure_ascii=False, indent=2))
             except Exception as e:
                 print(f">>> 為路段 '{section_id}' 傳送時失敗: {e}")
-        # else:
-            # 可選：如果需要顯示未滿的佇列狀態，可以取消註解以下這行
-            # print(f"--- 路段 '{section_id}' 資料不足 ({len(data_queue)}/{client.config['seq_len']})，跳過預測。 ---")
+        else:
+            print(f"--- 路段 '{section_id}' 資料不足 ({len(data_queue)}/{client.config['seq_len']})，跳過預測。 ---")
 
 
 def run_scheduler():
@@ -199,11 +188,11 @@ def run_scheduler():
         time.sleep(1)
 
 # -------------------
-# 主程式進入點 (維持不變)
+# 主程式進入點
 # -------------------
 if __name__ == "__main__":
     schedule.every().minute.at(":15").do(predict_and_send_to_server, client=stateful_client)
-    print(f"排程已設定：每分鐘的第 15 秒執行預測並傳送。")
+    print(f"排程已設定：每分鐘的第 15 秒執行預測並傳送預測壅塞程度")
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     print("正在啟動 Flask 伺服器，監聽埠號 5001...")
