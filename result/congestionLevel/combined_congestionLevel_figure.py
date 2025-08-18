@@ -22,7 +22,7 @@ plt.figure(figsize=(14, 10))
 #plt.title('GRU 模型在不同預測時間下的效能指標', fontsize=16)
 
 # 定義顏色和線條樣式
-colors = {'Accuracy': 'r', 'Precision': 'g', 'Recall': 'b', 'F1': 'c'}
+colors = {'Accuracy': 'red', 'Precision': 'lightblue', 'Recall': 'gold', 'F1': 'black'}
 markers = {5: 'o', 15: 's', 30: '^'}
 linestyles = {5: '-', 15: '-', 30: '-'}
 
@@ -38,15 +38,16 @@ for metric in metrics:
 
 # 設定圖表屬性
 df_5min = dataframes[5]
-plt.xticks(df_5min['Epoch'].astype(int))
-plt.gca().yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
+plt.xticks(df_5min['Epoch'].astype(int),fontsize=20)
 plt.ylim(0.4, 1.0)
-plt.yticks([i * 0.05 for i in range(8, 21)])
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
+yticks = [i * 0.05 for i in range(8, 21)]  # 0.4~1.0
+yticklabels = [str(int(y * 100)) for y in yticks]  # 40~100
+plt.yticks(yticks, yticklabels, fontsize=20)
+plt.xlabel('Epoch', fontsize=20)
+plt.ylabel('Accuracy(%)', fontsize=20)
 
-plt.grid(True)
-plt.legend(loc='lower right')
+plt.grid(True,alpha=0.3)
+plt.legend(loc='lower right', fontsize=20, ncol=2)
 # 調整佈局並儲存圖表
 plt.tight_layout()
 output_filename_png = 'combined_GRU_congestionLevel_metrics_plot_single.png'
